@@ -29,6 +29,7 @@ jobs:
           repository: CatVodTVOfficial/TVBoxOSC
           ref: ${{ env.commit }}
           path: TVBoxOSC
+          fetch-depth: 0
       - name: Zip Source Code
         if: ${{ env.commit }}
         working-directory: TVBoxOSC
