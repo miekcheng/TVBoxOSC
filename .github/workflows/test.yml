@@ -19,22 +19,23 @@ jobs:
         run: |
           commit=$(curl -sL https://github.com/CatVodTVOfficial/TVBoxOSC/commits/main |grep -o '/CatVodTVOfficial/TVBoxOSC/commit/[a-z0-9]\+' |head -1 | cut -d\/ -f5)
           shortCommit=$(echo $commit |cut -c 1-20)
-          if git log --oneline |grep -q "$shortCommit"; then
-            exit
-          else
+          if ! git log --oneline |grep -q "$shortCommit"; then
             echo "commit=$commit" >> $GITHUB_ENV
             echo "tag=$(date -d '8 hour' -u +%Y%m%d-%H%M)" >> $GITHUB_ENV
           fi
       - uses: actions/checkout@v3
+        if: ${{ env.commit }}
         with:
           repository: CatVodTVOfficial/TVBoxOSC
           ref: ${{ env.commit }}
           path: TVBoxOSC
       - name: Zip Source Code
+        if: ${{ env.commit }}
         working-directory: TVBoxOSC
         run: |
           zip -q -x ".git/*" -r source.zip .
       - name: Release Apk Sign
+        if: ${{ env.commit }}
         working-directory: TVBoxOSC
         run: |
           signingConfigs='ICAgIHNpZ25pbmdDb25maWdzIHtcCiAgICAgICAgaWYgKHByb2plY3QuaGFzUHJvcGVydHkoIlJFTEVBU0VfU1RPUkVfRklMRSIpKSB7XAogICAgICAgICAgICBteUNvbmZpZyB7XAogICAgICAgICAgICAgICAgc3RvcmVGaWxlIGZpbGUoUkVMRUFTRV9TVE9SRV9GSUxFKVwKICAgICAgICAgICAgICAgIHN0b3JlUGFzc3dvcmQgUkVMRUFTRV9TVE9SRV9QQVNTV09SRFwKICAgICAgICAgICAgICAgIGtleUFsaWFzIFJFTEVBU0VfS0VZX0FMSUFTXAogICAgICAgICAgICAgICAga2V5UGFzc3dvcmQgUkVMRUFTRV9LRVlfUEFTU1dPUkRcCiAgICAgICAgICAgICAgICB2MVNpZ25pbmdFbmFibGVkIHRydWVcCiAgICAgICAgICAgICAgICB2MlNpZ25pbmdFbmFibGVkIHRydWVcCiAgICAgICAgICAgICAgICBlbmFibGVWM1NpZ25pbmcgPSB0cnVlXAogICAgICAgICAgICAgICAgZW5hYmxlVjRTaWduaW5nID0gdHJ1ZVwKICAgICAgICAgICAgfVwKICAgICAgICB9XAogICAgfVwKXA=='
@@ -48,11 +49,13 @@ jobs:
           sed -i '$a\RELEASE_STORE_PASSWORD=TVBoxOSC'       ./gradle.properties
           sed -i '$a\RELEASE_KEY_PASSWORD=TVBoxOSC'         ./gradle.properties
       - name: Build With Gradle
+        if: ${{ env.commit }}
         working-directory: TVBoxOSC
         run: |
           chmod +x gradlew
           ./gradlew assemblerelease --build-cache --parallel --daemon --warning-mode all
       - name: Prepare App
+        if: ${{ env.commit }}
         working-directory: TVBoxOSC
         run: |
           rm -rf ${{ github.workspace }}/apk/
@@ -62,11 +65,13 @@ jobs:
           done
       - name: Upload App To Artifact
         uses: actions/upload-artifact@v3
+        if: ${{ env.commit }}
         with:
           name: com.github.tvbox.osc
           path: ${{ github.workspace }}/apk/*
       - name: Release and Upload Assets
         uses: softprops/action-gh-release@v1
+        if: ${{ env.commit }}
         with:
           name: ${{ env.tag }}
           tag_name: ${{ env.tag }}
@@ -77,6 +82,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Push to master
+        if: ${{ env.commit }}
         run: |
           rm -rf TVBoxOSC
           sed -i '/url =/d' ./.git/config
