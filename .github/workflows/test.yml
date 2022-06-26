@@ -21,6 +21,7 @@ jobs:
           shortCommit=$(echo $commit |cut -c 1-20)
           if ! git log --oneline |grep -q "$shortCommit"; then
             echo "commit=$commit" >> $GITHUB_ENV
+            echo "shortCommit=$shortCommit" >> $GITHUB_ENV
             echo "tag=$(date -d '8 hour' -u +%Y%m%d-%H%M)" >> $GITHUB_ENV
           fi
       - uses: actions/checkout@v3
@@ -82,6 +83,15 @@ jobs:
             TVBoxOSC/source.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Post To Telegram
+        if: ${{ env.commit }}
+        run: |
+          if [ -n "${{ secrets.CHANNEL_ID }}" ] && [ -n "${{ secrets.BOT_TOKEN }}" ]; then
+            OUTPUT="apk/"
+            export appRelease=$(find $OUTPUT -name "*release*.apk")
+            export sourceCode="TVBoxOSC/source.zip"
+            curl -v "https://api.telegram.org/bot${{ secrets.BOT_TOKEN }}/sendMediaGroup?chat_id=${{ secrets.CHANNEL_ID }}&media=%5B%7B%22type%22%3A%22document%22%2C%20%22media%22%3A%22attach%3A%2F%2FappRelease%22%7D%2C%7B%22type%22%3A%22document%22%2C%20%22media%22%3A%22attach%3A%2F%2FsourceCode%22%2C%20%22caption%22%3A%22${{ env.commit }}%22%7D%5D" -F appRelease="@$appRelease" -F sourceCode="@$sourceCode"
+          fi
       - name: Push to master
         if: ${{ env.commit }}
         run: |
